@@ -1,7 +1,4 @@
-// __SCAFFOLD__ = true
 import type { Commit } from './types.ts'
-
-export const __SCAFFOLD__ = true
 
 /**
  * Groups commits into sessions by time gap.
@@ -13,5 +10,20 @@ export function detectSessions(
   commits: Commit[],
   gapSeconds: number
 ): Commit[][] {
-  throw new Error('Not yet implemented — RED scaffold (detect-sessions)')
+  if (commits.length === 0) return []
+
+  const [firstCommit, ...remainingCommits] = commits
+
+  return remainingCommits.reduce<Commit[][]>((sessions, currentCommit) => {
+    const lastSession = sessions[sessions.length - 1]
+    const lastCommit = lastSession[lastSession.length - 1]
+    const gapFromPrevious = currentCommit.timestamp - lastCommit.timestamp
+
+    if (gapFromPrevious > gapSeconds) {
+      return [...sessions, [currentCommit]]
+    }
+
+    const updatedLastSession = [...lastSession, currentCommit]
+    return [...sessions.slice(0, -1), updatedLastSession]
+  }, [[firstCommit]])
 }
