@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "type": "module",
   "bin": {
-    "cca": "./src/index.ts"
+    "cca": "./bin/cca"
   },
   "scripts": {
     "test": "vitest run",
