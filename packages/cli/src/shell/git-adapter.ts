@@ -1,15 +1,39 @@
-// __SCAFFOLD__ = true
+import { execSync } from 'node:child_process'
 import type { GitReader, LogOpts } from '../core/ports.ts'
 
-export const __SCAFFOLD__ = true
+const MAX_BUFFER = 64 * 1024 * 1024
 
-/**
- * Implements GitReader using child_process.execSync.
- * ADR-03: execSync over simple-git — no dependency cost, spike validated.
- *
- * readDiff: returns empty string for the root commit (no parent).
- * readLog: applies --no-merges and format string from opts.
- */
+function buildLogArgs(opts: LogOpts): string {
+  const noMergesFlag = opts.noMerges ? '--no-merges ' : ''
+  const format = opts.format ?? '%H %at %s'
+  return `${noMergesFlag}--format="${format}"`
+}
+
+function readLog(repoPath: string, opts: LogOpts): string {
+  const args = buildLogArgs(opts)
+  return execSync(`git log ${args}`, {
+    cwd: repoPath,
+    encoding: 'utf8',
+    maxBuffer: MAX_BUFFER,
+  })
+}
+
+function readDiff(repoPath: string, sha: string): string {
+  try {
+    return execSync(`git diff ${sha}~1 ${sha}`, {
+      cwd: repoPath,
+      encoding: 'utf8',
+      maxBuffer: MAX_BUFFER,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (message.includes('unknown revision') || message.includes('ambiguous argument')) {
+      return ''
+    }
+    throw new Error(`git diff failed for ${sha}: ${message}`)
+  }
+}
+
 export function createGitAdapter(): GitReader {
-  throw new Error('Not yet implemented — RED scaffold (shell/git-adapter)')
+  return { readLog, readDiff }
 }
