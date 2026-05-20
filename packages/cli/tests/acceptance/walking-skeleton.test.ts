@@ -70,17 +70,16 @@ describe('cca analyse — walking skeleton', () => {
     const json = JSON.parse(stdout)
     expect(Array.isArray(json.sessions)).toBe(true)
     expect(json.sessions.length).toBeGreaterThan(10)
-    expect(typeof json.totalHours).toBe('number')
-    expect(typeof json.totalTokens).toBe('number')
+    expect(typeof json.totals.hours).toBe('number')
+    expect(typeof json.totals.tokens).toBe('number')
     expect(json.healthDelta).toBeNull()
 
     // Each session must have the required shape
     const s = json.sessions[0]
-    expect(s).toHaveProperty('index')
-    expect(s).toHaveProperty('startDate')
-    expect(s).toHaveProperty('estimatedHours')
-    expect(s).toHaveProperty('confidence', '±40%')
-    expect(s.estimatedHours).toBeGreaterThanOrEqual(0)
+    expect(s).toHaveProperty('sessionIndex')
+    expect(s).toHaveProperty('startTime')
+    expect(s.effortEstimate.hours).toBeGreaterThanOrEqual(0)
+    expect(s.effortEstimate.confidence).toBe('±40%')
   })
 
   // AC-1.1 (negative): exits non-zero on a non-git directory

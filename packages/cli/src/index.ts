@@ -3,53 +3,10 @@ import { program } from 'commander'
 import { writeFileSync } from 'node:fs'
 import { analyse } from './core/analyse.ts'
 import { formatSummary, formatJson } from './core/format.ts'
-import type { AnalysisResult, Session } from './core/types.ts'
 import { createGitAdapter } from './shell/git-adapter.ts'
 import { createHealthAdapter } from './shell/health-adapter.ts'
 import { loadConfig } from './shell/config-loader.ts'
 
-/**
- * Produces backward-compatible JSON merging new AnalysisResult fields with
- * the old walking-skeleton shape. Preserves AC-2.1 (walking skeleton) while
- * satisfying AC-2.2, AC-2.3, AC-2.4 (new AnalysisResult fields).
- * Both sets of consumers will find their expected fields.
- */
-function formatCompatibleJson(result: AnalysisResult): string {
-  const sessionsWithCompat = result.sessions.map((s: Session) => ({
-    // New fields (AC-2.3, AC-2.4)
-    sessionIndex: s.sessionIndex,
-    startTime: s.startTime,
-    endTime: s.endTime,
-    durationHours: s.durationHours,
-    commits: s.commits,
-    effortEstimate: s.effortEstimate,
-    healthDelta: s.healthDelta,
-    // Backward-compat fields (AC-2.1 walking skeleton)
-    index: s.sessionIndex,
-    startDate: s.startTime.slice(0, 10),
-    endDate: s.endTime.slice(0, 10),
-    estimatedHours: s.effortEstimate.hours,
-    confidence: s.effortEstimate.confidence,
-  }))
-
-  const merged = {
-    // New fields (AC-2.2)
-    repoPath: result.repoPath,
-    analysedAt: result.analysedAt,
-    fromSha: result.fromSha,
-    toSha: result.toSha,
-    sessions: sessionsWithCompat,
-    totals: result.totals,
-    healthDelta: result.healthDelta,
-    // Backward-compat fields (AC-2.1 walking skeleton)
-    totalHours: result.totals.hours,
-    totalTokens: result.totals.tokens,
-    totalCommits: result.totals.commits,
-    sessionGapHours: 3,
-  }
-
-  return JSON.stringify(merged, null, 2)
-}
 
 program
   .name('cca')
@@ -77,7 +34,7 @@ program
       })
 
       const output = opts.format === 'json'
-        ? formatCompatibleJson(result)
+        ? formatJson(result)
         : formatSummary(result)
 
       if (opts.output) {
