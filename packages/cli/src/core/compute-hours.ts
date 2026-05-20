@@ -1,7 +1,4 @@
-// __SCAFFOLD__ = true
-import type { FileStats, EffortEstimate, FileCategory } from './types.ts'
-
-export const __SCAFFOLD__ = true
+import type { FileStats, EffortEstimate, FileCategory, CategoryBreakdown } from './types.ts'
 
 export const CHARS_PER_TOKEN = 3.5
 export const HOURS_PER_DAY = 8
@@ -19,11 +16,43 @@ export const METHODOLOGY_NOTE =
   'Swoopy token-weighted model. Throughput: source 250, test 400, doc 500, config 600 tokens/day. ' +
   'Char/token ratio: 1:3.5. Confidence: ±40%.'
 
+const CATEGORIES: FileCategory[] = ['source', 'test', 'doc', 'config']
+
+function emptyBreakdown(): CategoryBreakdown {
+  return Object.fromEntries(
+    CATEGORIES.map((category) => [category, { hours: 0, tokens: 0 }])
+  ) as CategoryBreakdown
+}
+
+function accumulateBreakdown(breakdown: CategoryBreakdown, file: FileStats): CategoryBreakdown {
+  const existing = breakdown[file.category]
+  return {
+    ...breakdown,
+    [file.category]: {
+      hours: existing.hours + file.hours,
+      tokens: existing.tokens + file.tokenCount,
+    },
+  }
+}
+
 /**
  * Computes effort estimate from a list of file stats.
- * Formula: tokens = charCount / CHARS_PER_TOKEN
- *          hours  = (tokens / rate) × HOURS_PER_DAY
+ * Uses pre-computed tokenCount and hours from each FileStats entry.
+ * Aggregates totals and produces a per-category breakdown.
  */
 export function computeHours(fileStats: FileStats[]): EffortEstimate {
-  throw new Error('Not yet implemented — RED scaffold (compute-hours)')
+  const breakdown = fileStats.reduce(accumulateBreakdown, emptyBreakdown())
+
+  const totals = Object.values(breakdown).reduce(
+    (acc, { hours, tokens }) => ({ hours: acc.hours + hours, tokens: acc.tokens + tokens }),
+    { hours: 0, tokens: 0 }
+  )
+
+  return {
+    hours: totals.hours,
+    tokens: totals.tokens,
+    breakdown,
+    confidence: '±40%',
+    note: METHODOLOGY_NOTE,
+  }
 }

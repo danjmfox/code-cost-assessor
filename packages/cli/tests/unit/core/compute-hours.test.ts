@@ -24,13 +24,13 @@ function testFile(charCount: number): FileStats {
 }
 
 describe('computeHours', () => {
-  it.skip('returns zero hours for empty file stats', () => {
+  it('returns zero hours for empty file stats', () => {
     const estimate = computeHours([])
     expect(estimate.hours).toBe(0)
     expect(estimate.tokens).toBe(0)
   })
 
-  it.skip('formula: tokens = chars / 3.5, hours = (tokens / rate) × 8', () => {
+  it('formula: tokens = chars / 3.5, hours = (tokens / rate) × 8', () => {
     // 3500 chars of source code = 1000 tokens
     // hours = (1000 / 250) × 8 = 32h
     const estimate = computeHours([sourceFile(3500)])
@@ -38,14 +38,14 @@ describe('computeHours', () => {
     expect(estimate.tokens).toBeCloseTo(1000, 0)
   })
 
-  it.skip('test files use rate 400 tok/day (higher throughput = fewer hours per token)', () => {
+  it('test files use rate 400 tok/day (higher throughput = fewer hours per token)', () => {
     // 4000 chars of test = 4000/3.5 ≈ 1143 tokens
     // hours = (1143 / 400) × 8 ≈ 22.86h
     const estimate = computeHours([testFile(4000)])
     expect(estimate.hours).toBeCloseTo((4000 / 3.5 / 400) * 8, 1)
   })
 
-  it.skip('breakdown includes hours and tokens by category', () => {
+  it('breakdown includes hours and tokens by category', () => {
     const estimate = computeHours([sourceFile(3500), testFile(4000)])
     expect(estimate.breakdown.source.hours).toBeGreaterThan(0)
     expect(estimate.breakdown.test.hours).toBeGreaterThan(0)
@@ -53,19 +53,19 @@ describe('computeHours', () => {
     expect(estimate.breakdown.config.hours).toBe(0)
   })
 
-  it.skip('confidence is always ±40%', () => {
+  it('confidence is always ±40%', () => {
     const estimate = computeHours([sourceFile(3500)])
     expect(estimate.confidence).toBe('±40%')
   })
 
-  it.skip('note cites the Swoopy methodology', () => {
+  it('note cites the Swoopy methodology', () => {
     const estimate = computeHours([sourceFile(3500)])
     expect(estimate.note).toMatch(/Swoopy/i)
     expect(estimate.note).toMatch(/3\.5/)
     expect(estimate.note).toMatch(/±40%/)
   })
 
-  it.skip('total hours equals sum of breakdown hours across all categories', () => {
+  it('total hours equals sum of breakdown hours across all categories', () => {
     const estimate = computeHours([sourceFile(3500), testFile(4000)])
     const breakdownSum = Object.values(estimate.breakdown).reduce(
       (sum, { hours }) => sum + hours, 0
