@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest'
 import { parseCommits } from '../../../src/core/parse-commits.ts'
 
 describe('parseCommits', () => {
-  it.skip('parses a single commit from git log output', () => {
+  it('parses a single commit from git log output', () => {
     const logLine = 'abc123 1714000000 feat: add session detection'
     const result = parseCommits(logLine)
     expect(result).toHaveLength(1)
@@ -16,7 +16,7 @@ describe('parseCommits', () => {
     expect(result[0].message).toBe('feat: add session detection')
   })
 
-  it.skip('returns commits in chronological order (oldest first)', () => {
+  it('returns commits in chronological order (oldest first)', () => {
     const logOutput = [
       'sha3 1714000200 third commit',
       'sha2 1714000100 second commit',
@@ -28,12 +28,12 @@ describe('parseCommits', () => {
     expect(result[2].sha).toBe('sha3')
   })
 
-  it.skip('returns empty array for empty input', () => {
+  it('returns empty array for empty input', () => {
     expect(parseCommits('')).toHaveLength(0)
     expect(parseCommits('   ')).toHaveLength(0)
   })
 
-  it.skip('ignores malformed lines that cannot be parsed', () => {
+  it('ignores malformed lines that cannot be parsed', () => {
     const logOutput = 'bad-line\nabc123 1714000000 good commit'
     const result = parseCommits(logOutput)
     expect(result).toHaveLength(1)
