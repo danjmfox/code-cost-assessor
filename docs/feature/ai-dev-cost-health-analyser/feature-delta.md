@@ -385,3 +385,132 @@ No CREATE NEW decisions — all implementation builds on or extends the walking 
 | OQ-2 | What is the correct format for `--dev-rate` (hourly rate → USD cost)? Output format? | DISTILL | AC-4.5 |
 | OQ-3 | What session gap heuristic (or config guidance) should be documented for continuous-integration repos? | DISTILL/DELIVER | Docs |
 | OQ-4 | Should `--format json` include the exclusion list used in the output for reproducibility? | DISTILL | AC-2.1 |
+
+---
+
+## Wave: DISTILL / [REF] Scenario List with Tags
+
+| # | Scenario | Tags | Status | AC |
+|---|---------|------|--------|----|
+| WS-1 | exits 0 on valid git repository | `@walking_skeleton @real-io @driving_adapter` | GREEN (inherited) | AC-1.1 |
+| WS-2 | session table with commits and estimated hours | `@walking_skeleton @real-io` | GREEN (inherited) | AC-1.2 |
+| WS-3 | total hours plausible non-zero figure | `@walking_skeleton @real-io` | GREEN (inherited) | AC-1.3 |
+| WS-4 | methodology citation present | `@walking_skeleton @real-io` | GREEN (inherited) | AC-1.6 |
+| WS-5 | JSON emits valid structure | `@walking_skeleton @real-io` | GREEN (inherited) | AC-2.1 |
+| WS-6 | exits non-zero on non-git directory | `@walking_skeleton @real-io @error` | GREEN (inherited) | AC-1.1 neg |
+| S1-1 | session table includes all required columns | `@US-1 @real-io` | GREEN | AC-1.2 |
+| S1-2 | ±40% shown on every session row | `@US-1 @real-io` | GREEN | AC-1.4 |
+| S1-3 | `--session-gap 1` produces more sessions | `@US-1 @real-io @driving_adapter` | GREEN | AC-1.5 |
+| S1-4 | `--session-gap 4` produces fewer sessions | `@US-1 @real-io` | GREEN | AC-1.5 |
+| S2-1 | JSON includes fromSha, toSha, totals | `@US-2 @real-io` | **SKIP** (DELIVER) | AC-2.2 |
+| S2-2 | session has full shape (effortEstimate, commits[]) | `@US-2 @real-io` | **SKIP** (DELIVER) | AC-2.3 |
+| S2-3 | effortEstimate has breakdown by category | `@US-2 @real-io` | **SKIP** (DELIVER) | AC-2.4 |
+| S2-4 | healthDelta null at session level | `@US-2 @real-io` | GREEN | AC-2.5 |
+| S2-5 | `--output <file>` writes JSON to file | `@US-2 @real-io @driving_adapter` | **SKIP** (DELIVER) | AC-2.6 |
+| S4-1 | Methodology section cites Swoopy model | `@US-4 @real-io` | GREEN | AC-4.1 |
+| S4-2 | throughput rates shown in output | `@US-4 @real-io` | GREEN | AC-4.2 |
+| S4-3 | ±40% confidence interval stated | `@US-4 @real-io` | GREEN | AC-4.3 |
+| S4-4 | 1:3.5 char/token ratio cited | `@US-4 @real-io` | GREEN | AC-4.4 |
+| S4-5 | same repo → same total hours (reproducibility) | `@US-4 @real-io` | GREEN | AC-4.1 |
+| U-1 | parseCommits: single commit from log output | `@unit` | **SKIP** (DELIVER) | — |
+| U-2 | parseCommits: chronological ordering | `@unit` | **SKIP** (DELIVER) | — |
+| U-3 | parseCommits: empty input → [] | `@unit` | **SKIP** (DELIVER) | — |
+| U-4 | parseCommits: ignores malformed lines | `@unit` | **SKIP** (DELIVER) | — |
+| U-5 | detectSessions: consecutive commits → one session | `@unit` | **SKIP** (DELIVER) | — |
+| U-6 | detectSessions: gap > gapSeconds → new session | `@unit` | **SKIP** (DELIVER) | D-05 |
+| U-7 | detectSessions: single commit → one session | `@unit` | **SKIP** (DELIVER) | — |
+| U-8 | classifyFile: excludes pnpm-lock.yaml | `@unit` | **SKIP** (DELIVER) | DDD-3 |
+| U-9 | classifyFile: .test.ts → test | `@unit` | **SKIP** (DELIVER) | — |
+| U-10 | classifyFile: .ts in packages/ → source | `@unit` | **SKIP** (DELIVER) | — |
+| U-11 | classifyFile: .md → doc | `@unit` | **SKIP** (DELIVER) | — |
+| U-12 | estimateCost: counts chars in + lines only | `@unit` | **SKIP** (DELIVER) | — |
+| U-13 | estimateCost: excludes pnpm-lock.yaml diff | `@unit` | **SKIP** (DELIVER) | DDD-3 |
+| U-14 | computeHours: formula (chars / 3.5 / rate) × 8 | `@unit` | **SKIP** (DELIVER) | D-02 |
+| U-15 | computeHours: breakdown by category | `@unit` | **SKIP** (DELIVER) | AC-2.4 |
+| U-16 | computeHours: confidence is always ±40% | `@unit` | **SKIP** (DELIVER) | AC-1.4 |
+| U-17 | computeHours: note cites Swoopy methodology | `@unit` | **SKIP** (DELIVER) | AC-4.1 |
+
+---
+
+## Wave: DISTILL / [REF] Walking Skeleton Strategy
+
+**Strategy C — Real local (all adapters, no doubles)**
+
+Justification: all driven adapters are local resources (git subprocess, filesystem). No costly external services in Slice 1. fallow (Slice 2) is optional and returns null — not a test double, a documented behavior.
+
+Walking skeleton inherited from SPIKE (committed at `edb383a`). 6 scenarios green. DISTILL builds on top without rewriting.
+
+---
+
+## Wave: DISTILL / [REF] Adapter Coverage Table
+
+| Adapter | Real-IO Scenario | Covered By |
+|---------|-----------------|------------|
+| `GitReader` (git-adapter.ts) | YES — reads real Swoopy commit log and diffs | WS-1, S1-1, S1-3 |
+| `HealthReader` (health-adapter.ts) | YES — returns null; verified in test | S2-4 |
+| `ConfigLoader` (config-loader.ts) | YES — `--session-gap` and `--output` flags exercised | S1-3, S2-5 |
+
+All adapters covered. No `NO — MISSING` rows.
+
+---
+
+## Wave: DISTILL / [REF] Scaffolds
+
+| Module | Path | Marker | Scaffold function(s) |
+|--------|------|--------|---------------------|
+| Core types | `src/core/types.ts` | none (type definitions) | — |
+| Core ports | `src/core/ports.ts` | none (type definitions) | — |
+| Parse commits | `src/core/parse-commits.ts` | `__SCAFFOLD__ = true` | `parseCommits()` |
+| Detect sessions | `src/core/detect-sessions.ts` | `__SCAFFOLD__ = true` | `detectSessions()` |
+| Classify file | `src/core/classify-file.ts` | `__SCAFFOLD__ = true` | `classifyFile()` |
+| Estimate cost | `src/core/estimate-cost.ts` | `__SCAFFOLD__ = true` | `estimateCost()` |
+| Compute hours | `src/core/compute-hours.ts` | `__SCAFFOLD__ = true` | `computeHours()` |
+| Format | `src/core/format.ts` | `__SCAFFOLD__ = true` | `formatSummary()`, `formatJson()` |
+| Core analyse | `src/core/analyse.ts` | `__SCAFFOLD__ = true` | `analyse()` |
+| Git adapter | `src/shell/git-adapter.ts` | `__SCAFFOLD__ = true` | `createGitAdapter()` |
+| Health adapter | `src/shell/health-adapter.ts` | `__SCAFFOLD__ = true` | `createHealthAdapter()` |
+| Config loader | `src/shell/config-loader.ts` | `__SCAFFOLD__ = true` | `loadConfig()` |
+
+Detection: `grep -r "__SCAFFOLD__" packages/cli/src/` — zero remaining = DELIVER complete.
+
+---
+
+## Wave: DISTILL / [REF] Test Placement
+
+| Type | Path | Precedent |
+|------|------|----------|
+| Acceptance (CLI subprocess) | `packages/cli/tests/acceptance/` | Walking skeleton established this convention |
+| Unit (pure core functions) | `packages/cli/tests/unit/core/` | Pure functions; no subprocess needed |
+
+---
+
+## Wave: DISTILL / [REF] Driving Adapter Coverage
+
+| Driving Adapter | Protocol | Covered By |
+|----------------|---------|------------|
+| `cca analyse <repo>` | subprocess (node CLI) | All acceptance tests |
+| `cca analyse <repo> --format json` | subprocess (node CLI) | WS-5, S2-1–S2-5 |
+| `cca analyse <repo> --session-gap N` | subprocess (node CLI) | S1-3, S1-4 |
+| `cca analyse <repo> --output <file>` | subprocess (node CLI) | S2-5 |
+
+All driving adapters from DESIGN have at least one subprocess scenario.
+
+---
+
+## Wave: DISTILL / [REF] Pre-requisites
+
+**DESIGN driving ports required:**
+- `cca analyse <repo-path>` CLI (commander, Node 22)
+- `src/core/ports.ts`: `GitReader`, `HealthReader` type signatures
+- dep-cruiser config: `core/` → `shell/` forbidden
+
+**Environment:**
+- Node 22.18 (type-stripped TS, `--experimental-strip-types`)
+- `~/projects/swoopy` git repository present on test machine
+- pnpm 10+ installed
+
+**Open questions resolved for DELIVER:**
+- OQ-1: Exclusion list uses RegExp patterns (already in classify-file.ts DEFAULT_EXCLUDE_PATTERNS); DELIVER may extend to support string globs in `.ccarc.json`
+- OQ-2: `--dev-rate` deferred — not in Slice 1 scope
+- OQ-3: Session gap guidance → README note in DELIVER documentation step
+- OQ-4: Exclusion list in JSON output → `analysedAt` extended to include config snapshot; DELIVER decides
