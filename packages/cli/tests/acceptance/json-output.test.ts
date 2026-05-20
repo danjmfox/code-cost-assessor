@@ -32,7 +32,7 @@ function runCca(args: string): { stdout: string; stderr: string; exitCode: numbe
 
 describe('cca analyse --format json (US-2)', () => {
   // AC-2.2: JSON includes all required top-level fields
-  it.skip('@real-io AC-2.2: JSON includes repoPath, analysedAt, fromSha, toSha, sessions[], totals', () => {
+  it('@real-io AC-2.2: JSON includes repoPath, analysedAt, fromSha, toSha, sessions[], totals', () => {
     const { stdout, exitCode } = runCca(`analyse ${SWOOPY} --format json`)
     expect(exitCode).toBe(0)
     const json = JSON.parse(stdout)
@@ -49,7 +49,7 @@ describe('cca analyse --format json (US-2)', () => {
   })
 
   // AC-2.3: each session has the full required shape
-  it.skip('@real-io AC-2.3: each session has sessionIndex, startTime, endTime, durationHours, commits[], effortEstimate, healthDelta', () => {
+  it('@real-io AC-2.3: each session has sessionIndex, startTime, endTime, durationHours, commits[], effortEstimate, healthDelta', () => {
     const { stdout } = runCca(`analyse ${SWOOPY} --format json`)
     const json = JSON.parse(stdout)
     const s = json.sessions[0]
@@ -66,7 +66,7 @@ describe('cca analyse --format json (US-2)', () => {
   })
 
   // AC-2.4: effortEstimate includes breakdown by category
-  it.skip('@real-io AC-2.4: effortEstimate has hours, tokens, breakdown, confidence, note', () => {
+  it('@real-io AC-2.4: effortEstimate has hours, tokens, breakdown, confidence, note', () => {
     const { stdout } = runCca(`analyse ${SWOOPY} --format json`)
     const json = JSON.parse(stdout)
     const estimate = json.sessions[0].effortEstimate
