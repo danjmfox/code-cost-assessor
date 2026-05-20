@@ -275,3 +275,113 @@ Signals assessed:
 - **Slice 1** (skeleton): Git reading + session detection + cost estimation + CLI summary + JSON
 - **Slice 2** (health): Fallow adapter + health overlay in summary/JSON
 - Spikes run BEFORE Slice 1 begins.
+
+---
+
+## Wave: DESIGN / [REF] Design Decisions
+
+| ID | Decision | Verdict | Rationale |
+|----|---------|---------|-----------|
+| DDD-1 | Single package with explicit port contracts | Adopted | Ports as TS function type signatures; DI via parameter passing; dep-cruiser enforces boundary. Option 2 of 3 evaluated. |
+| DDD-2 | `child_process.execSync` over `simple-git` | Adopted | Spike B validated raw git commands at 1.85s/144 commits; no dependency cost; git output is stable and human-readable. |
+| DDD-3 | Exclusion list as first-class config (`.ccarc.json`) | Adopted | Spike A: without exclusions, model inflates 20×. Users must be able to extend for project-specific generated paths. |
+| DDD-4 | Two git log strategies | Adopted | `--no-merges` for cost analysis (avoid double-counting); all commits for session detection (closer to human-perceived count). |
+| DDD-5 | fallow health adapter stubbed to null (Slice 2) | Adopted | D-04 hard requirement: tool must function without fallow. Adapter is a first-class port returning null, not a branch buried in core. |
+| DDD-6 | Functional paradigm, Pure Core / Imperative Shell | Adopted | Global CLAUDE.md default for projects with a domain model; pure functions have no hidden state and need no mocks. |
+
+---
+
+## Wave: DESIGN / [REF] Component Decomposition
+
+| Component | Path | Change | Notes |
+|-----------|------|--------|-------|
+| Core ports | `src/core/ports.ts` | New | `GitReader`, `HealthReader` type signatures |
+| Core types | `src/core/types.ts` | New | `Commit`, `Session`, `FileStats`, `AnalysisResult`, `FileCategory` |
+| Parse commits | `src/core/parse-commits.ts` | New | Extracted from `analyse.ts`; pure |
+| Detect sessions | `src/core/detect-sessions.ts` | New | Extracted from `analyse.ts`; pure |
+| Classify file | `src/core/classify-file.ts` | New | Extracted from `analyse.ts`; pure |
+| Estimate cost | `src/core/estimate-cost.ts` | New | Extracted from `analyse.ts`; pure |
+| Compute hours | `src/core/compute-hours.ts` | New | Formula: `(chars / 3.5 / rate) × 8`; pure |
+| Format | `src/core/format.ts` | New | `formatSummary()`, `formatJson()`; pure |
+| Analyse orchestrator | `src/core/analyse.ts` | Refactor | Accepts ports; pure pipeline orchestrator |
+| Git adapter | `src/shell/git-adapter.ts` | New | Implements `GitReader` via `execSync` |
+| Health adapter | `src/shell/health-adapter.ts` | New | Implements `HealthReader`; returns `null` (Slice 2) |
+| Config loader | `src/shell/config-loader.ts` | New | Merges `.ccarc.json` + CLI flags → `AnalyseOptions` |
+| CLI entry | `src/index.ts` | Refactor | Injects adapters; no domain logic |
+| dep-cruiser config | `.dependency-cruiser.cjs` | New | Forbidden: `core/` imports from `shell/` |
+
+All paths are relative to `packages/cli/`.
+
+---
+
+## Wave: DESIGN / [REF] Driving Ports
+
+| Port | Invocation | Output |
+|------|-----------|--------|
+| CLI summary | `cca analyse <repo-path> [--session-gap N] [--dev-rate N]` | Session table + totals block to stdout |
+| CLI JSON | `cca analyse <repo-path> --format json [--output file]` | `AnalysisResult` JSON to stdout or file |
+| CLI stderr warnings | N/A | fallow absence, confidence caveats |
+
+---
+
+## Wave: DESIGN / [REF] Driven Ports and Adapters
+
+| Port | Type Signature | Adapter | Notes |
+|------|---------------|---------|-------|
+| `GitReader.readLog` | `(repoPath: string, opts: LogOpts) → string` | `git-adapter.ts` | `opts.noMerges`, `opts.format` |
+| `GitReader.readDiff` | `(repoPath: string, sha: string) → string` | `git-adapter.ts` | Returns empty string for root commit |
+| `HealthReader.getDelta` | `(repoPath: string, fromSha: string, toSha: string) → HealthDelta \| null` | `health-adapter.ts` | Returns `null` (Slice 2); logs warning to stderr |
+
+---
+
+## Wave: DESIGN / [REF] Technology Choices
+
+| Concern | Choice | Version | Rationale |
+|---------|--------|---------|-----------|
+| Runtime | Node.js | 22.18 | Type-stripped TS support stable; LTS |
+| Language | TypeScript | (type-stripped, no build) | `--experimental-strip-types`; no `tsc` compile step |
+| Module system | ESM | — | Node 22 native; no CJS |
+| CLI framework | commander | ^12 | Already in skeleton; minimal, stable |
+| Git access | `child_process.execSync` | stdlib | No dependency; spike validated |
+| Health analysis | `npx fallow` | ≥2.76 | JSON schema v6; optional (graceful null) |
+| Testing | Vitest | ^3 | Already in skeleton; ESM native |
+| Boundary enforcement | dependency-cruiser | ^16 | Enforces core → no shell imports in CI |
+| User config | `.ccarc.json` | — | JSON; easy to extend; no YAML overhead |
+
+---
+
+## Wave: DESIGN / [REF] Decisions Table
+
+| DDD-N | Short label |
+|-------|------------|
+| DDD-1 | Single package + explicit ports |
+| DDD-2 | execSync over simple-git |
+| DDD-3 | Exclusion list in .ccarc.json |
+| DDD-4 | Dual git log strategy |
+| DDD-5 | Health adapter null stub |
+| DDD-6 | FP paradigm + Pure Core / Shell |
+
+Full ADRs: see `docs/product/architecture/adr-*.md`.
+
+---
+
+## Wave: DESIGN / [REF] Reuse Analysis
+
+| Existing Component | File | Overlap | Decision | Justification |
+|---|---|---|---|---|
+| `analyse()` function | `packages/cli/src/analyse.ts` | All current cost analysis logic | EXTEND | Refactor into core/shell; pure logic extracted to `core/`, I/O moved to `shell/` |
+| CLI entry | `packages/cli/src/index.ts` | Commander setup, arg parsing | EXTEND | Add config-loader + port injection; commander setup unchanged |
+| Acceptance test | `packages/cli/tests/acceptance/walking-skeleton.test.ts` | AC-1.1, AC-1.2, AC-1.3, AC-2.1 | EXTEND | Add scenarios as ACs expand in DISTILL |
+
+No CREATE NEW decisions — all implementation builds on or extends the walking skeleton.
+
+---
+
+## Wave: DESIGN / [REF] Open Questions
+
+| # | Question | Owner | Wave |
+|---|---------|-------|------|
+| OQ-1 | Should `.ccarc.json` support glob patterns in the exclusion list, or only suffix/prefix? | DISTILL | Acceptance criteria |
+| OQ-2 | What is the correct format for `--dev-rate` (hourly rate → USD cost)? Output format? | DISTILL | AC-4.5 |
+| OQ-3 | What session gap heuristic (or config guidance) should be documented for continuous-integration repos? | DISTILL/DELIVER | Docs |
+| OQ-4 | Should `--format json` include the exclusion list used in the output for reproducibility? | DISTILL | AC-2.1 |
