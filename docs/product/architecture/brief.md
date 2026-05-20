@@ -126,6 +126,25 @@ packages/cli/
 | Boundary enforcement | dependency-cruiser | ^16 |
 | User config | `.ccarc.json` | — |
 
+### Component Inventory (shipped — DELIVER wave 2026-05-20)
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| `src/core/classify-file.ts` | SHIPPED | classifyFile, DEFAULT_EXCLUDE_PATTERNS |
+| `src/core/estimate-cost.ts` | SHIPPED | estimateCost — unified diff parser |
+| `src/core/compute-hours.ts` | SHIPPED | computeHours, THROUGHPUT_RATES, METHODOLOGY_NOTE |
+| `src/core/parse-commits.ts` | SHIPPED | parseCommits |
+| `src/core/detect-sessions.ts` | SHIPPED | detectSessions |
+| `src/core/format.ts` | SHIPPED | formatSummary, formatJson |
+| `src/core/analyse.ts` | SHIPPED | pipeline orchestrator, accepts Ports |
+| `src/shell/git-adapter.ts` | SHIPPED | createGitAdapter (execSync) |
+| `src/shell/health-adapter.ts` | SHIPPED | createHealthAdapter (null stub — Slice 2 deferred) |
+| `src/shell/config-loader.ts` | SHIPPED | loadConfig (.ccarc.json + CLI flags) |
+| `src/index.ts` | SHIPPED | Imperative Shell — adapter injection, output dispatch |
+| `.dependency-cruiser.cjs` | SHIPPED | enforces core/ ↛ shell/ |
+| fallow health adapter (real) | DEFERRED | Slice 2 — requires fallow CLI integration |
+| `--dev-rate` USD conversion | DEFERRED | AC-4.5 — not in Slice 1 scope |
+
 ### Key Decisions
 
 See ADRs:

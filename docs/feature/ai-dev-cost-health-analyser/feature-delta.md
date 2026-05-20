@@ -514,3 +514,130 @@ All driving adapters from DESIGN have at least one subprocess scenario.
 - OQ-2: `--dev-rate` deferred — not in Slice 1 scope
 - OQ-3: Session gap guidance → README note in DELIVER documentation step
 - OQ-4: Exclusion list in JSON output → `analysedAt` extended to include config snapshot; DELIVER decides
+
+---
+
+## Wave: DELIVER / [REF] Implementation Summary
+
+All 12 scaffold modules implemented via TDD. Pure Core / Imperative Shell architecture realised: business logic in `src/core/` (pure functions, no I/O), adapters in `src/shell/`. Ports injected via parameter passing in `src/index.ts`. Dependency-cruiser enforces the core → shell boundary. Monolithic walking-skeleton `src/analyse.ts` removed.
+
+---
+
+## Wave: DELIVER / [REF] Files Modified
+
+**Production (core):**
+- `src/core/classify-file.ts` — classifyFile: returns null for excluded files, FileCategory otherwise
+- `src/core/estimate-cost.ts` — estimateCost: parses unified diff, counts added-line chars per file
+- `src/core/compute-hours.ts` — computeHours: Swoopy formula aggregation with category breakdown
+- `src/core/parse-commits.ts` — parseCommits: git log → Commit[] chronological
+- `src/core/detect-sessions.ts` — detectSessions: time-gap grouping → Commit[][]
+- `src/core/format.ts` — formatSummary, formatJson: pure output formatters
+- `src/core/analyse.ts` — analyse: pipeline orchestrator accepting Ports, returning AnalysisResult
+- `src/index.ts` — Imperative Shell: adapter construction, port injection, output dispatch
+
+**Production (shell):**
+- `src/shell/git-adapter.ts` — createGitAdapter: execSync-based GitReader implementation
+- `src/shell/health-adapter.ts` — createHealthAdapter: null stub (Slice 2 deferred, scaffold removed)
+- `src/shell/config-loader.ts` — loadConfig: .ccarc.json + CLI flags merge
+
+**Deleted:**
+- `src/analyse.ts` — monolithic walking skeleton; superseded by modular pipeline
+
+**Config:**
+- `.dependency-cruiser.cjs` — forbids core/ → shell/ imports; 0 violations on 18 modules
+
+**Tests (new):**
+- `tests/unit/core/format.test.ts` — 10 unit tests for formatSummary and formatJson
+- `tests/unit/shell/git-adapter.test.ts` — adapter shape and integration tests
+- `tests/unit/shell/config-loader.test.ts` — merge precedence tests
+
+**Tests (un-skipped):**
+- All 37 previously-skipped unit and acceptance tests now active
+
+**Docs:**
+- `README.md` — methodology, output format, configuration, architecture
+
+---
+
+## Wave: DELIVER / [REF] Scenarios Green Count
+
+**68 of 68** tests passing (0 skipped, 0 failed) as of 2026-05-20.
+
+| Category | Count |
+|----------|-------|
+| Acceptance (walking skeleton) | 6 |
+| Acceptance (US-1 session timeline) | 4 |
+| Acceptance (US-2 JSON output) | 5 |
+| Acceptance (US-4 methodology) | 5 |
+| Unit (classify-file) | 11 |
+| Unit (estimate-cost) | 6 |
+| Unit (compute-hours) | 7 |
+| Unit (parse-commits) | 4 |
+| Unit (detect-sessions) | 5 |
+| Unit (format) | 10 |
+| Unit (git-adapter) | 2 |
+| Unit (config-loader) | 3 |
+
+---
+
+## Wave: DELIVER / [REF] DoD Check
+
+| Item | Status | Evidence |
+|------|--------|---------|
+| All ACs pass against Swoopy fixture repo | PASS | 68/68 tests, including all acceptance tests run against ~/projects/swoopy |
+| `pnpm test` succeeds from root | PASS | No build step (type-stripped TS); pnpm test = vitest run |
+| CLI runs against its own repository without crashing | PASS | `cca analyse ./code-cost-assessor` → 17 commits, 1 session, 533h ±40% |
+| JSON output validates against AnalysisResult type | PASS | AC-2.2, AC-2.3, AC-2.4 passing; all required fields present |
+| Health analysis degrades gracefully when fallow not installed | PASS | healthDelta: null, warning to stderr; AC-2.5, AC-3.2 passing |
+| Methodology note appears with throughput rates cited | PASS | AC-4.1, AC-4.2 passing; rates in every summary output |
+| All estimates labelled with confidence level | PASS | ±40% on every session row and totals block |
+| ADRs written for all five design decisions | PASS | ADR-01 to ADR-05 in docs/product/architecture/ |
+| README explains methodology and how to interpret output | PASS | README.md created with formula, rates, output format, session detection |
+
+---
+
+## Wave: DELIVER / [REF] Demo Evidence
+
+**Story 1** — `cca analyse ~/projects/swoopy`:
+```
+Code Cost Assessor — Session Analysis
+Repository: /Users/danielosborne/projects/swoopy
+Commits:    309 (non-merge, grouped into 33 sessions)
+Session  1  2026-03-27  74 commits  774h  ±40%
+...
+Methodology: Swoopy token-weighted model
+  Throughput: source 250, test 400, doc 500, config 600 tokens/day
+  Char/token ratio: 1:3.5 | Confidence interval: ±40%
+```
+Exit code: 0. Non-empty output. ✓
+
+**Story 2** — `cca analyse ~/projects/swoopy --format json`:
+```json
+{ "repoPath": "...", "sessions": 33, "totals": { "hours": 11496, "confidence": "±40%" },
+  "sessions[0].effortEstimate": { "breakdown": { "source": {...}, "test": {...} } } }
+```
+Exit code: 0. Valid JSON with all required fields. ✓
+
+**Story 4** — methodology section present in every run. ✓
+
+---
+
+## Wave: DELIVER / [REF] Quality Gates
+
+| Gate | Result |
+|------|--------|
+| Roadmap review | PASS (orchestrator review, hobby rigor) |
+| TDD — all 12 steps COMMIT/PASS | PASS (DES integrity verified) |
+| Design compliance (no unauthorized new files) | PASS |
+| dep-cruiser boundary enforcement | PASS (0 violations, 18 modules) |
+| Adversarial review | SKIPPED (on-demand per global rigor profile) |
+| Mutation testing | SKIPPED (on-demand per global rigor profile) |
+| DES integrity verification | PASS (`des-verify-integrity` exit 0) |
+
+---
+
+## Wave: DELIVER / [REF] Pre-requisites
+
+- DISTILL: 53 scenarios (16 green inherited, 37 skip) — all 53 now green
+- DESIGN: Pure Core / Imperative Shell + port contracts (ports.ts, types.ts)
+- SPIKE: Walking skeleton at edb383a3 (inherited; not rewritten)
