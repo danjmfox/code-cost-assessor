@@ -91,7 +91,7 @@ describe('cca analyse --format json (US-2)', () => {
   })
 
   // AC-2.6: --output writes JSON to file
-  it.skip('@real-io @driving_adapter AC-2.6: --output <file> writes JSON to file instead of stdout', () => {
+  it('@real-io @driving_adapter AC-2.6: --output <file> writes JSON to file instead of stdout', () => {
     const outFile = join(tmpdir(), `cca-test-${Date.now()}.json`)
     try {
       const { stdout, exitCode } = runCca(`analyse ${SWOOPY} --format json --output ${outFile}`)
