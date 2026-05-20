@@ -67,8 +67,9 @@ Health (Slice 2 / fallow adapter) is excluded from the skeleton.
 **Promotion recorded**: 2026-05-20 — user selected PROMOTE after reviewing all
 four spike results.
 
-**Commit**: to be added after walking skeleton is built and the acceptance
-test is green.
+**Commit**: `edb383a` — feat(ai-dev-cost-health-analyser): walking skeleton — cca analyse shows session cost table
+
+**Demo command**: `node --experimental-strip-types packages/cli/src/index.ts analyse ~/projects/swoopy`
 
 ---
 
