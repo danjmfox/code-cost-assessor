@@ -81,6 +81,17 @@ Commits are grouped into sessions using a configurable time gap (default: 3 hour
 
 All estimates carry a **±40% confidence interval**. This reflects natural variance in developer productivity. Use the numbers for order-of-magnitude comparisons, not precise billing.
 
+### Limitations
+
+This model estimates **code volume**, not code value or complexity:
+
+- **No quality assessment** — A 100-character change could be trivial (whitespace) or critical (security fix). Token count alone doesn't distinguish.
+- **Ignores refactoring cost** — Refactoring often requires more cognitive effort per character than greenfield work.
+- **Linear effort assumption** — Real development is non-linear; learning curves, debugging, and domain knowledge matter more than character count.
+- **Depends on git history** — Work that wasn't committed, or squashed commits, cannot be estimated.
+
+**Best used for:** Order-of-magnitude benchmarking (e.g., "~5,000 hours of equivalent work generated"). Not suitable for precision costing or performance evaluation.
+
 ## Output
 
 ### Summary (default)
@@ -168,7 +179,7 @@ Lock files, build artefacts, and binary assets are excluded automatically:
 
 ## Health analysis
 
-Health trajectory overlay (per-session code quality delta) requires `fallow`. When fallow is not installed, `healthDelta` is `null` and a warning is printed to stderr. Core cost estimation works without it.
+Health trajectory overlay (per-session code quality delta) requires `fallow`. When fallow is not installed, `healthDelta` is `null` and a warning is printed to stderr. Core cost estimation works witho[...]
 
 ## Architecture
 
