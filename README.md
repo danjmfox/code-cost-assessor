@@ -2,6 +2,41 @@
 
 Estimates the manual development effort equivalent of an AI-built codebase by analysing its git history.
 
+## Requirements
+
+- Node 22+ (`node --version`)
+- pnpm 10+ (`pnpm --version`)
+- Git
+
+## Installation
+
+```bash
+git clone https://github.com/danjmfox/code-cost-assessor.git
+cd code-cost-assessor
+pnpm install
+pnpm link --global   # run from packages/cli/
+```
+
+Or from inside `packages/cli/`:
+
+```bash
+cd packages/cli
+pnpm link --global
+```
+
+After linking, `cca` is available globally. Open a new terminal if the command isn't found yet (pnpm adds its bin dir to `PATH` via `~/.zshrc`).
+
+### First-time pnpm setup
+
+If you get `ERR_PNPM_NO_GLOBAL_BIN_DIR`, run:
+
+```bash
+pnpm setup
+source ~/.zshrc
+```
+
+Then re-run `pnpm link --global` from `packages/cli/`.
+
 ## Usage
 
 ```bash
