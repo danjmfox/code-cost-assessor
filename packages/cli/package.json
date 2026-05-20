@@ -1,0 +1,17 @@
+{
+  "name": "@cca/cli",
+  "version": "0.0.1",
+  "type": "module",
+  "bin": {
+    "cca": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}

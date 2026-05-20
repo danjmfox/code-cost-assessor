@@ -1,0 +1,70 @@
+jobs:
+  - id: J-01
+    title: Evaluate an AI-built codebase I didn't write
+    statement: >
+      When I inherit or evaluate a codebase built with AI assistance,
+      I want to quantify its true effort equivalent and current health,
+      so I can benchmark it against future projects and make defensible
+      investment or ownership decisions.
+    dimensions:
+      functional: >
+        Produce a per-session cost estimate (in hours and optionally USD)
+        alongside health signals, comparable across repositories.
+      emotional: >
+        Feel confident assessing code I didn't write, without relying
+        solely on subjective code review.
+      social: >
+        Have a reproducible, methodology-backed number to present when
+        justifying tooling investment or pricing a codebase handoff.
+    four_forces:
+      push: >
+        Subjective assessments of AI-built code are unreliable and
+        undefendable. No standard methodology exists for answering
+        "what would this have cost without AI?"
+      pull: >
+        A reproducible, per-repo number that travels — like COCOMO —
+        and accumulates benchmarking value across projects over time.
+      anxiety: >
+        The methodology has ±40% confidence. Will stakeholders trust
+        numbers derived from token throughput rates?
+      habit: >
+        Currently reviewing AI-built code manually, forming intuitive
+        estimates that can't be reproduced or compared.
+    opportunity_score: 9
+    notes: >
+      Primary job — every design decision should serve this.
+      The builder self-audit is a secondary use case (same tool,
+      same output, lower-stakes audience).
+
+  - id: J-02
+    title: Detect high-velocity sessions that degraded health
+    statement: >
+      When reviewing a codebase's development history,
+      I want to correlate fast-moving sessions with health signal drops,
+      so I can direct code review attention to the riskiest windows.
+    dimensions:
+      functional: >
+        Per-session view showing effort hours alongside health delta
+        (dead code, duplication, complexity changes).
+      emotional: >
+        Feel like the review time is spent on the right things.
+      social: >
+        Justify targeted review focus to a team without reading
+        every commit.
+    four_forces:
+      push: >
+        All commits look the same in a flat git log. No signal
+        about which sessions were highest risk.
+      pull: >
+        A timeline that makes the correlation visible — high hours
+        + health drop = flag for review.
+      anxiety: >
+        Health analysis requires fallow to be installed. Tool
+        should degrade gracefully if it isn't.
+      habit: >
+        Currently scanning git log + blame manually, or not at all.
+    opportunity_score: 7
+    notes: >
+      Secondary job — serves both auditor and ongoing tech lead
+      use cases. Fallow integration is a hard dependency for this job;
+      the tool must degrade gracefully when fallow is absent.

@@ -1,0 +1,34 @@
+id: auditor
+name: The Codebase Auditor
+tagline: "Evaluates AI-built repos they didn't write"
+triggers:
+  - Inheriting a codebase from another team or contractor
+  - Evaluating a vendor delivery before sign-off
+  - Benchmarking AI-assisted dev productivity across projects
+  - Pricing a codebase handoff
+mental_model: >
+  Thinks in terms of "what would a competent contractor charge for this?"
+  Familiar with COCOMO and LOC-based estimates from past project audits.
+  Trusts numbers that come with explicit methodology and confidence intervals.
+  Distrusts tools with no documentation of their assumptions.
+vocabulary:
+  - "person-hours", "person-months"
+  - "code quality" (means: health + test coverage)
+  - "AI productivity multiplier"
+  - "compression ratio"
+frustrations:
+  - No standard methodology for AI-era cost estimation
+  - LOC counts mislead on AI-generated code (fast to produce ≠ cheap to maintain)
+  - Health tools give snapshots, not trajectories
+needs:
+  - Reproducible output: same repo, same answer
+  - Explainable methodology: can point a stakeholder at the formula
+  - Confidence interval: explicit uncertainty, not false precision
+  - Graceful degradation: works without fallow installed
+secondary_persona:
+  id: builder
+  name: The Builder
+  tagline: "Created the repo, documenting the work"
+  note: >
+    Same tool, same output. Lower stakes (self-audit for HOW-IT-WAS-MADE
+    documentation). Primary persona drives design decisions.

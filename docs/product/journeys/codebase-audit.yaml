@@ -1,0 +1,78 @@
+id: codebase-audit
+name: Codebase Audit
+persona: auditor
+job_ids: [J-01, J-02]
+description: >
+  The auditor receives a repository path, runs the tool, reads the session
+  table and methodology note, and forms a defensible cost and health assessment.
+
+steps:
+  - id: trigger
+    name: Receive repository
+    description: Auditor is handed a repo path (local clone or URL to clone)
+    artifact: repo_path
+    emotional_state: uncertain
+    expected_output: a local path to a git repository
+
+  - id: run
+    name: Run the tool
+    description: "`cca analyse <repo-path>`"
+    artifact: raw_output
+    emotional_state: anticipating
+    expected_output: session table printed to stdout
+
+  - id: read-summary
+    name: Read session table
+    description: >
+      Auditor reads per-session hours, health verdict, and totals block.
+      Looks for high-hours + degraded-health sessions.
+    artifact: session_table
+    emotional_state: engaged
+    expected_output: understanding of where effort concentrated and where quality may have slipped
+
+  - id: read-methodology
+    name: Verify methodology
+    description: >
+      Auditor reads the methodology note: throughput rates, confidence interval,
+      token-to-char ratio. Decides if they can defend the number.
+    artifact: methodology_note
+    emotional_state: confident or skeptical
+    expected_output: "yes, I can explain how this number was derived"
+
+  - id: export-json
+    name: Export for benchmarking (optional)
+    description: "`cca analyse <repo-path> --format json > audit.json`"
+    artifact: audit_json
+    emotional_state: systematic
+    expected_output: JSON file for comparison to other repo audits
+
+  - id: report
+    name: Present findings
+    description: Auditor presents total hours, compression ratio, and health summary
+    artifact: report
+    emotional_state: confident
+    expected_output: stakeholder accepts the estimate as defensible
+
+error_paths:
+  - step: run
+    failure: tool crashes on repository
+    recovery: check git init; ensure HEAD exists; add --from flag to skip problematic commits
+
+  - step: run
+    failure: fallow not installed
+    recovery: warning on stderr; health column shows 'unavailable'; tool continues
+
+  - step: read-methodology
+    failure: auditor cannot understand throughput rates
+    recovery: methodology note references HOW-IT-WAS-MADE.md; README explains model
+
+shared_artifacts:
+  - name: repo_path
+    source: auditor (handed in)
+    consumers: [run]
+  - name: session_table
+    source: CLI stdout
+    consumers: [read-summary, read-methodology]
+  - name: audit_json
+    source: CLI stdout (--format json)
+    consumers: [export-json, benchmarking pipeline]

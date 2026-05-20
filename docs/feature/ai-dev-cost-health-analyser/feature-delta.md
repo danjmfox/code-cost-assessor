@@ -1,0 +1,277 @@
+# Feature Delta — ai-dev-cost-health-analyser
+
+Wave: DISCUSS | Density: lean | Date: 2026-05-20
+
+---
+
+## Wave: DISCUSS / [REF] Persona ID
+
+**Primary**: `auditor` — evaluates AI-built repositories they did not write.
+Triggers: inheriting a codebase, pricing a handoff, benchmarking AI productivity.
+Needs reproducible, explainable output with explicit confidence intervals.
+
+**Secondary**: `builder` — self-auditing their own AI-assisted work for documentation.
+Same tool, same output, lower-stakes audience. Does not drive design decisions.
+
+---
+
+## Wave: DISCUSS / [REF] JTBD One-Liner
+
+**J-01 (primary)**: When I inherit an AI-built codebase, I want to quantify its
+effort equivalent and health trajectory, so I can benchmark it against future
+projects and make a defensible investment decision.
+
+**J-02 (secondary)**: When reviewing a development history, I want to see which
+sessions combined high velocity with health degradation, so I can direct code
+review attention to the riskiest windows.
+
+---
+
+## Wave: DISCUSS / [REF] Locked Decisions
+
+### D-01: Session is the primary unit of analysis (NOT commit)
+**Verdict**: Session (time-gap grouped commits) is the rollup unit for display.
+Per-commit data is computed but surfaced in detail views only.
+**Rationale**: The auditor wants "this 4-hour block cost X hours manually."
+Commit-level granularity is noise without context. HOW-IT-WAS-MADE.md's
+18-session structure is the reference format.
+**Session definition**: consecutive commits where inter-commit gap > configurable
+threshold (default: 3 hours). Aligns with Swoopy methodology.
+**Open question resolved**: the spec defaulted to per-commit. The auditor
+persona and benchmark use case require session rollup as first-class output.
+**Impact on spec**: CLI `--format summary` shows session table, not commit table.
+JSON output includes both. Session detection is in scope for the skeleton.
+
+### D-02: Benchmarking requires a stable, reproducible cost model
+**Verdict**: The Swoopy throughput-rate model (250/400/500/600 tokens/day) is
+adopted as the default. Parameters MUST be exposed and documented — the auditor
+needs to point a stakeholder at the formula.
+**Assumption under validation (→ Spike A)**: the throughput rates produce
+numbers that scale plausibly across different repos and session sizes.
+**Known inconsistency**: the spec's sanity check ("Session 08 → 6–10 hours")
+appears to conflate AI session duration with estimated manual effort. The
+Swoopy methodology applied correctly to Session 08 (+3,687 insertions at
+~35 chars/line) yields ~950 hours of estimated manual effort — consistent with
+the overall 4,725-hour Swoopy total, but NOT 6–10 hours. Spike A resolves this.
+
+### D-03: Character count source — full diff parse (NOT numstat line approximation)
+**Verdict**: pending Spike B. Two options:
+- **Option A** (full diff): parse `git diff` output, count characters of `+`
+  lines per file. Accurate but requires reading full diff content.
+- **Option B** (numstat + constant): `insertions × avg_chars_per_line` (e.g. 35).
+  Fast but adds a new approximation constant with no empirical basis.
+**Provisional choice**: Option A (full diff), because the auditor use case
+values accuracy and reproducibility over raw performance. Spike B validates
+whether this is fast enough at realistic repo scales.
+
+### D-04: Fallow integration is optional infrastructure, not a core dependency
+**Verdict**: the tool MUST function without fallow. Health output is `null` when
+fallow is absent. Warning emitted; no error.
+**Assumption under validation (→ Spike C)**: fallow's JSON output schema
+is stable and parseable. The `--base` flag supports per-session delta analysis.
+
+### D-05: Session detection is in scope for the skeleton
+**Verdict**: session grouping by time gap is a first-class feature, not a
+post-MVP addition. Without sessions, the benchmark use case (J-01) cannot be
+served — per-commit output is not legible for auditors or stakeholders.
+**Algorithm**: sort commits by timestamp; group where inter-commit gap ≤ 3h
+(configurable via `--session-gap`). Session = { start, end, duration, commits }.
+
+---
+
+## Wave: DISCUSS / [REF] User Stories
+
+### Story 1 — Session cost timeline
+
+```
+As an auditor evaluating an AI-built repository,
+I want to run a single command and see a per-session breakdown of estimated
+manual effort,
+so I can understand the development rhythm and total cost equivalent at a glance.
+```
+
+**Job**: J-01
+
+#### Elevator Pitch
+Before: I have no standard way to estimate what an AI-built codebase would have cost manually.
+After: `cca analyse ./my-repo` → session table with estimated hours per session, confidence level, and total.
+Decision enabled: I can tell a stakeholder "this would have taken ~X person-months to build manually" with a reproducible methodology I can point to.
+
+**Acceptance Criteria**:
+- AC-1.1: Command exits 0 on a valid git repository.
+- AC-1.2: Output shows a session table with columns: session #, date range, commits, estimated hours, confidence.
+- AC-1.3: A totals block shows total estimated hours, total tokens, and confidence note.
+- AC-1.4: All estimates are labelled as estimates; confidence level is explicit.
+- AC-1.5: Sessions are grouped by time gap (default 3h); gap is configurable via `--session-gap`.
+- AC-1.6: The methodology note references the Swoopy model and its ±40% confidence interval.
+
+---
+
+### Story 2 — JSON output for benchmarking
+
+```
+As an auditor building a benchmark across multiple repositories,
+I want machine-readable JSON output from the tool,
+so I can compare cost and health metrics across projects over time.
+```
+
+**Job**: J-01
+
+#### Elevator Pitch
+Before: I have a number from one repo but no way to compare it to another.
+After: `cca analyse ./repo-a --format json > repo-a.json` → JSON with sessions array, totals, and metadata.
+Decision enabled: I can feed multiple repo analyses into a comparison script and identify productivity patterns.
+
+**Acceptance Criteria**:
+- AC-2.1: `--format json` emits a valid JSON object conforming to the `RepoAnalysis` type.
+- AC-2.2: Output includes `repoPath`, `analysedAt`, `fromSha`, `toSha`, `sessions[]`, `totals`.
+- AC-2.3: Each session entry includes: `sessionIndex`, `startTime`, `endTime`, `durationHours`, `commits[]`, `effortEstimate`, `healthDelta`.
+- AC-2.4: `effortEstimate` includes `hours`, `tokens`, `breakdown` (by category), `confidence`, `note`.
+- AC-2.5: `healthDelta` is `null` when fallow is not installed; a warning is logged to stderr.
+- AC-2.6: `--output <file>` writes JSON to file instead of stdout.
+
+---
+
+### Story 3 — Health trajectory overlay
+
+```
+As an auditor wanting to identify risky sessions,
+I want to see health signal changes alongside cost estimates per session,
+so I can focus my code review on the sessions that combined high velocity
+with health degradation.
+```
+
+**Job**: J-02
+
+#### Elevator Pitch
+Before: I can see the session cost timeline but have no signal about where quality may have slipped.
+After: `cca analyse ./repo` → session table includes a health verdict column (improved / degraded / stable / unavailable).
+Decision enabled: I target code review at the "high hours + degraded" sessions rather than reviewing everything.
+
+**Acceptance Criteria**:
+- AC-3.1: When fallow is installed, each session shows a health verdict: `improved`, `degraded`, `stable`.
+- AC-3.2: When fallow is not installed, the health column shows `unavailable` with a note to stderr.
+- AC-3.3: `--no-health` flag skips fallow analysis entirely (faster run).
+- AC-3.4: Health delta includes dead code delta, duplication delta, complexity delta in JSON output.
+- AC-3.5: The summary output highlights sessions where health verdict is `degraded`.
+
+---
+
+### Story 4 — Reproducible methodology
+
+```
+As an auditor presenting results to a stakeholder,
+I want the output to document the estimation methodology and its parameters,
+so I can defend the numbers without deep knowledge of the tool's internals.
+```
+
+**Job**: J-01
+
+#### Elevator Pitch
+Before: The number exists but I can't explain how it was derived.
+After: `cca analyse ./repo --format summary` → totals block includes methodology citation, throughput rates used, and confidence note.
+Decision enabled: A non-technical stakeholder can read the output and understand what the numbers mean and where they came from.
+
+**Acceptance Criteria**:
+- AC-4.1: Summary output includes a "Methodology" section citing the Swoopy token-weighted model.
+- AC-4.2: Throughput rates (tokens/day per category) are shown in the summary output.
+- AC-4.3: The ±40% confidence interval is stated explicitly.
+- AC-4.4: The character-to-token ratio (1:3.5) is cited.
+- AC-4.5: `--dev-rate <n>` converts hours to USD cost estimate; rate is shown in output.
+
+---
+
+## Wave: DISCUSS / [REF] Acceptance Criteria Summary
+
+| AC | Story | Statement |
+|----|-------|-----------|
+| AC-1.1–1.6 | S-1 | Session cost timeline with grouping and methodology note |
+| AC-2.1–2.6 | S-2 | JSON output with full RepoAnalysis structure including sessions |
+| AC-3.1–3.5 | S-3 | Health overlay per session; graceful degradation without fallow |
+| AC-4.1–4.5 | S-4 | Methodology documentation in output |
+
+---
+
+## Wave: DISCUSS / [REF] Definition of Done
+
+- [ ] All ACs pass against the Swoopy fixture repo
+- [ ] `pnpm install && pnpm build && pnpm test` succeed from root
+- [ ] CLI runs against its own repository without crashing
+- [ ] JSON output validates against the `RepoAnalysis` TypeScript type
+- [ ] Health analysis degrades gracefully when fallow not installed
+- [ ] Methodology note appears in summary output with throughput rates cited
+- [ ] All estimates labelled as estimates with confidence level
+- [ ] ADRs written for all five design decisions
+- [ ] README explains methodology and how to interpret output
+
+---
+
+## Wave: DISCUSS / [REF] Out of Scope
+
+- Visualisation (HTML report, terminal charts)
+- AI API cost tracking from log files (type exists; adapter returns null)
+- External service integrations
+- Automatic session threshold calibration
+- Per-file cost breakdown in the summary output (available in JSON)
+- Historical trend comparison across multiple runs (benchmarking requires external tooling)
+
+---
+
+## Wave: DISCUSS / [REF] WS Strategy
+
+**Strategy B** — Walking Skeleton with real integration.
+
+The skeleton proves: git reading → session detection → cost estimation → CLI output.
+Health is excluded from the skeleton (optional infrastructure). Fallow adapter
+is stubbed to return null. The skeleton must run end-to-end on the Swoopy repo
+and produce a session table matching (within ±40%) the HOW-IT-WAS-MADE.md session log.
+
+---
+
+## Wave: DISCUSS / [REF] Driving Ports
+
+- **CLI** (`packages/cli/src/index.ts`): `cca analyse <repo-path> [options]`
+- **JSON stdout**: machine-readable output for benchmarking pipelines
+- **stderr warnings**: fallow absence, estimation confidence caveats
+
+---
+
+## Wave: DISCUSS / [REF] Pre-requisites
+
+- Node 22, pnpm 10+
+- `simple-git` npm package (git reading)
+- `commander` npm package (CLI argument parsing)
+- `fallow` CLI (optional; installed via `cargo install fallow-cli` or `npx fallow`)
+- A target git repository for testing (Swoopy: `~/projects/swoopy`)
+
+---
+
+## Wave: DISCUSS / [REF] Open Questions → Spike Candidates
+
+Four assumptions must be validated before the design is frozen.
+Each maps to a spike brief in `docs/feature/ai-dev-cost-health-analyser/slices/`.
+
+| # | Assumption | Risk if wrong | Spike |
+|---|-----------|---------------|-------|
+| OQ-1 | Swoopy throughput rates (250/400/500/600 tok/day) produce plausible session estimates when applied to real git history | Model yields numbers that are orders of magnitude off; spec sanity check already shows inconsistency | Spike A |
+| OQ-2 | Full diff character counting is fast enough at realistic repo scales (Swoopy: 152 commits, ~67 files/session avg) | Performance unacceptable; must fall back to numstat + constant approximation | Spike B |
+| OQ-3 | Fallow `audit --format json` output is stable and includes per-file dead code, duplication, complexity deltas | Adapter design is wrong before it's written | Spike C |
+| OQ-4 | Time-gap session detection (3h default) produces sessions that match human-perceived work blocks on Swoopy | Session grouping is meaningless or misaligned; granularity decision D-01 needs revision | Spike D |
+
+---
+
+## Wave: DISCUSS / [REF] Scope Assessment
+
+**Result: PASS with recommended split**
+
+Signals assessed:
+- User stories: 4 (within range, but S-3 depends on fallow — independent deliverable)
+- Bounded contexts: 3 (git reading, cost estimation, health analysis)
+- Walking skeleton integration points: 4 (git reader → categoriser → estimator → session grouper → formatter)
+- Estimated effort: 2–3 weeks (likely exceeds 2-week threshold)
+- Independent outcomes: yes — cost timeline (S-1, S-2, S-4) can ship without health (S-3)
+
+**Recommended split**:
+- **Slice 1** (skeleton): Git reading + session detection + cost estimation + CLI summary + JSON
+- **Slice 2** (health): Fallow adapter + health overlay in summary/JSON
+- Spikes run BEFORE Slice 1 begins.
