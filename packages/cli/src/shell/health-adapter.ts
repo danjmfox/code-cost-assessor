@@ -1,7 +1,4 @@
-// __SCAFFOLD__ = true
 import type { HealthReader } from '../core/ports.ts'
-
-export const __SCAFFOLD__ = true
 
 /**
  * Stub HealthReader that always returns null.
