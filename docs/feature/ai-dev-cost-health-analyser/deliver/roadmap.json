@@ -1,0 +1,139 @@
+{
+  "roadmap": {
+    "project_id": "ai-dev-cost-health-analyser",
+    "created_at": "2026-05-20T12:47:51Z",
+    "total_steps": 12,
+    "phases": 4
+  },
+  "phases": [
+    {
+      "id": "01",
+      "name": "Pure core functions",
+      "steps": [
+        {
+          "id": "01-01",
+          "name": "Implement classifyFile",
+          "criteria": "classifyFile returns null for all excluded patterns (lock files, dist/, graphify-out/, binary assets). Returns 'test' for .test.ts and .spec.ts paths, 'source' for .ts files under packages/, 'doc' for .md files, 'config' for .json files. DEFAULT_EXCLUDE_PATTERNS is exported and exercised in all exclusion branches.",
+          "test_file": "tests/unit/core/classify-file.test.ts",
+          "scenario_name": "excludes pnpm-lock.yaml, classifies .test.ts files as test, classifies .ts files in packages/ as source, classifies .md files as doc"
+        },
+        {
+          "id": "01-02",
+          "name": "Implement estimateCost",
+          "criteria": "estimateCost parses a raw git diff string and returns one FileStats entry per changed file that is not excluded. charCount counts only characters in added (+) lines, excluding diff headers. Category is derived via classifyFile. Files matching DEFAULT_EXCLUDE_PATTERNS produce zero entries. Empty diff returns empty array.",
+          "test_file": "tests/unit/core/estimate-cost.test.ts",
+          "scenario_name": "counts characters in added (+) lines only, not headers, excludes pnpm-lock.yaml from results"
+        },
+        {
+          "id": "01-03",
+          "name": "Implement computeHours",
+          "criteria": "computeHours applies the Swoopy formula: tokenCount = charCount / 3.5; hours = (tokenCount / THROUGHPUT_RATES[category]) * 8. Returns EffortEstimate with hours, tokens, breakdown by category (source/test/doc/config), confidence '±40%', and a note citing Swoopy, 3.5 chars-per-token, and ±40%. Empty input returns zero hours and tokens. Total hours equals sum of breakdown category hours.",
+          "test_file": "tests/unit/core/compute-hours.test.ts",
+          "scenario_name": "formula: tokens = chars / 3.5, hours = (tokens / rate) × 8, breakdown includes hours and tokens by category, confidence is always ±40%, note cites the Swoopy methodology"
+        },
+        {
+          "id": "01-04",
+          "name": "Implement parseCommits",
+          "criteria": "parseCommits splits raw git log output (one 'sha timestamp message' line per commit) into an array of Commit objects sorted chronologically oldest-first. Empty or whitespace-only input returns []. Lines that do not match the expected format are silently ignored.",
+          "test_file": "tests/unit/core/parse-commits.test.ts",
+          "scenario_name": "parses a single commit from git log output, returns commits in chronological order (oldest first), returns empty array for empty input, ignores malformed lines that cannot be parsed"
+        },
+        {
+          "id": "01-05",
+          "name": "Implement detectSessions",
+          "criteria": "detectSessions groups a sorted Commit[] into sessions: consecutive commits whose timestamps differ by less than gapSeconds belong to the same session; a gap >= gapSeconds starts a new session. A single commit produces exactly one session. Sessions are returned in chronological order. The algorithm must not crash on a single-element input.",
+          "test_file": "tests/unit/core/detect-sessions.test.ts",
+          "scenario_name": "groups consecutive commits within the gap into one session, splits commits separated by more than gapSeconds into different sessions, a single commit produces one session"
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "name": "Format and shell adapters",
+      "steps": [
+        {
+          "id": "02-01",
+          "name": "Implement formatSummary and formatJson",
+          "criteria": "formatSummary accepts an AnalysisResult and returns a human-readable string showing session count, commit count, total hours, and confidence. formatJson accepts an AnalysisResult and returns a valid JSON string whose parsed form satisfies the AnalysisResult type shape. Neither function performs I/O.",
+          "test_file": "",
+          "scenario_name": ""
+        },
+        {
+          "id": "02-02",
+          "name": "Implement createGitAdapter",
+          "criteria": "createGitAdapter returns an object satisfying the GitReader port: readLog(repoPath) executes 'git log --format=%H %ct %s' via child_process.execSync and returns the raw stdout string; readDiff(repoPath, sha) executes 'git show --stat --diff <sha>' and returns raw stdout. Both functions throw a descriptive Error when the git command exits non-zero. The adapter has no dependency on any core module.",
+          "test_file": "",
+          "scenario_name": ""
+        },
+        {
+          "id": "02-03",
+          "name": "Implement loadConfig",
+          "criteria": "loadConfig merges configuration from two sources: a .ccarc.json file in the target repo root (if present) and CLI flags passed as a partial AnalyseOptions object. CLI flags override file values. Returns a fully resolved AnalyseOptions with all optional fields filled from defaults when absent. Missing .ccarc.json is not an error.",
+          "test_file": "",
+          "scenario_name": ""
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "name": "Wire pipeline and un-skip acceptance tests",
+      "steps": [
+        {
+          "id": "03-01",
+          "name": "Wire analyse.ts pipeline and refactor index.ts to inject ports",
+          "criteria": "analyse.ts accepts GitReader and HealthReader ports as parameters and orchestrates the full pipeline: readLog → parseCommits → detectSessions → per-session (readDiff → estimateCost → computeHours → getDelta) → assemble AnalysisResult. index.ts constructs adapters via createGitAdapter and the health stub, then passes them into analyse(). Acceptance tests AC-2.2, AC-2.3, and AC-2.4 are green: JSON output includes repoPath, analysedAt, fromSha, toSha, sessions[], and totals; each session has sessionIndex, startTime, endTime, durationHours, commits[], effortEstimate with breakdown by category, and healthDelta null; effortEstimate has confidence '±40%' and a note citing Swoopy.",
+          "test_file": "tests/acceptance/json-output.test.ts",
+          "scenario_name": "@real-io AC-2.2: JSON includes repoPath, analysedAt, fromSha, toSha, sessions[], totals, @real-io AC-2.3: each session has sessionIndex, startTime, endTime, durationHours, commits[], effortEstimate, healthDelta, @real-io AC-2.4: effortEstimate has hours, tokens, breakdown, confidence, note"
+        },
+        {
+          "id": "03-02",
+          "name": "Implement --output flag",
+          "criteria": "When --output <file> is supplied, the CLI writes the JSON result to the specified file path and produces no stdout. Exit code is 0 on success. When --output is absent, JSON is written to stdout as before. The written file contains valid JSON satisfying the AnalysisResult shape.",
+          "test_file": "tests/acceptance/json-output.test.ts",
+          "scenario_name": "@real-io @driving_adapter AC-2.6: --output <file> writes JSON to file instead of stdout"
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "name": "Boundary enforcement and cleanup",
+      "steps": [
+        {
+          "id": "04-01",
+          "name": "Add dependency-cruiser config and enforce core cannot import shell",
+          "criteria": "A .dependency-cruiser.cjs file exists at packages/cli/. Running 'pnpm dep-cruiser src/' exits 0. The config includes a rule that forbids any module under src/core/ from importing any module under src/shell/. A deliberate violation (temporary test import) causes dep-cruiser to exit non-zero.",
+          "test_file": "",
+          "scenario_name": ""
+        },
+        {
+          "id": "04-02",
+          "name": "Remove old monolithic analyse.ts and verify zero __SCAFFOLD__ markers",
+          "criteria": "The old monolithic src/analyse.ts file is deleted. Running 'grep -r __SCAFFOLD__ src/' returns no matches. All unit and acceptance tests remain green after deletion. The walking skeleton tests continue to pass.",
+          "test_file": "",
+          "scenario_name": ""
+        }
+      ]
+    }
+  ],
+  "implementation_scope": {
+    "source_directories": [
+      "src/core/",
+      "src/shell/",
+      "src/"
+    ],
+    "test_directories": [
+      "tests/unit/core/",
+      "tests/acceptance/"
+    ],
+    "excluded_patterns": [
+      "pnpm-lock.yaml",
+      "dist/**",
+      "node_modules/**"
+    ]
+  },
+  "validation": {
+    "status": "approved",
+    "reviewer": "orchestrator",
+    "approved_at": "2026-05-20T13:00:00Z"
+  }
+}

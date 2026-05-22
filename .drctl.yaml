@@ -1,0 +1,5 @@
+repos:
+  code-cost-assessor:
+    path: .
+    defaultDomainDir: docs/decisions
+defaultRepo: code-cost-assessor

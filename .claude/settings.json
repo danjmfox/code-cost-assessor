@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm --filter \"@cca/cli\" test --run *)",
+      "Bash(pnpm --filter cli test --run *)",
+      "Bash(pnpm test --run *)",
+      "Bash(des-verify-integrity *)",
+      "mcp__Claude_Preview__preview_screenshot",
+      "mcp__Claude_Preview__preview_console_logs",
+      "mcp__Claude_Preview__preview_snapshot",
+      "mcp__ccd_session_mgmt__search_session_transcripts"
+    ]
+  }
+}
