@@ -68,3 +68,45 @@ jobs:
       Secondary job — serves both auditor and ongoing tech lead
       use cases. Fallow integration is a hard dependency for this job;
       the tool must degrade gracefully when fallow is absent.
+
+  - id: J-03
+    title: Calibrate the estimator to my team's actual throughput
+    statement: >
+      When the Swoopy defaults don't reflect my team's real productivity,
+      I want to plug in a custom estimator module at runtime,
+      so I can produce estimates calibrated to our actual throughput
+      without forking or patching the tool.
+    dimensions:
+      functional: >
+        Pass a custom estimator (TypeScript/JavaScript module) to `analyse()`
+        via Ports injection, or load one at runtime via `--estimator <path>`.
+        The module controls the full estimate pipeline for a diff.
+      emotional: >
+        Feel confident the estimate reflects a real, auditable methodology —
+        not a generic benchmark that stakeholders might legitimately challenge.
+      social: >
+        Demonstrate to stakeholders that the model is calibrated: "we ran
+        this on 20 sessions and tuned our own rates" is more credible than
+        citing Swoopy defaults.
+    four_forces:
+      push: >
+        Swoopy throughput rates (250/400/500/600 tokens/day) are generic
+        benchmarks. Teams with empirical throughput data cannot express
+        that knowledge without modifying the source.
+      pull: >
+        A documented port type + runtime loading = publishable custom
+        estimators. Teams can calibrate once and share the module.
+      anxiety: >
+        Will a custom estimator break the output format? Does the
+        EffortEstimate shape (confidence, note) still communicate
+        the methodology honestly?
+      habit: >
+        Currently accepting Swoopy defaults, manually post-processing
+        output, or simply not using the tool for repos where the rates
+        feel wrong.
+    opportunity_score: 6
+    notes: >
+      Developer extensibility job. Primary beneficiary is the auditor
+      (more defensible output) via developer tooling. Port must enforce
+      the EffortEstimate contract so the methodology note remains honest.
+      Emerged from feature estimator-port-adapter (2026-05-22).

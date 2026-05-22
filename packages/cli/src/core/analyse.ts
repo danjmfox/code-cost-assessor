@@ -4,9 +4,6 @@ import type { AnalyseOptions, AnalysisResult, Session, Totals, Commit } from './
 import type { Ports } from './ports.ts'
 import { parseCommits } from './parse-commits.ts'
 import { detectSessions } from './detect-sessions.ts'
-import { estimateCost } from './estimate-cost.ts'
-import { computeHours } from './compute-hours.ts'
-import { DEFAULT_EXCLUDE_PATTERNS } from './classify-file.ts'
 
 function resolveAbsPath(repoPath: string): string {
   return resolve(repoPath.replace(/^~/, homedir()))
@@ -30,16 +27,28 @@ async function buildSession(
   const endTime = toIso(group[group.length - 1].timestamp)
   const durationHours = computeDurationHours(startTime, endTime)
 
-  const allFileStats = (
-    await Promise.all(
-      group.map(async (commit) => {
-        const diff = ports.git.readDiff(absPath, commit.sha)
-        return estimateCost(diff, DEFAULT_EXCLUDE_PATTERNS)
-      })
-    )
-  ).flat()
+  const estimates = await Promise.all(
+    group.map(async (commit) => {
+      const diff = ports.git.readDiff(absPath, commit.sha)
+      return ports.estimator.estimate(diff)
+    })
+  )
 
-  const effortEstimate = computeHours(allFileStats)
+  const effortEstimate = estimates.reduce(
+    (acc, est) => ({
+      hours: acc.hours + est.hours,
+      tokens: acc.tokens + est.tokens,
+      breakdown: {
+        source: { hours: acc.breakdown.source.hours + est.breakdown.source.hours, tokens: acc.breakdown.source.tokens + est.breakdown.source.tokens },
+        test:   { hours: acc.breakdown.test.hours   + est.breakdown.test.hours,   tokens: acc.breakdown.test.tokens   + est.breakdown.test.tokens   },
+        doc:    { hours: acc.breakdown.doc.hours     + est.breakdown.doc.hours,     tokens: acc.breakdown.doc.tokens     + est.breakdown.doc.tokens     },
+        config: { hours: acc.breakdown.config.hours  + est.breakdown.config.hours,  tokens: acc.breakdown.config.tokens  + est.breakdown.config.tokens  },
+      },
+      confidence: est.confidence,
+      note: est.note,
+    }),
+    { hours: 0, tokens: 0, breakdown: { source: { hours: 0, tokens: 0 }, test: { hours: 0, tokens: 0 }, doc: { hours: 0, tokens: 0 }, config: { hours: 0, tokens: 0 } }, confidence: '±40%', note: '' }
+  )
 
   return {
     sessionIndex,
@@ -48,7 +57,6 @@ async function buildSession(
     durationHours,
     commits: group,
     effortEstimate,
-    healthDelta: null,
   }
 }
 
@@ -56,12 +64,14 @@ function computeTotals(sessions: Session[]): Totals {
   const totalCommits = sessions.reduce((sum, s) => sum + s.commits.length, 0)
   const totalHours = sessions.reduce((sum, s) => sum + s.effortEstimate.hours, 0)
   const totalTokens = sessions.reduce((sum, s) => sum + s.effortEstimate.tokens, 0)
+  const note = sessions[0]?.effortEstimate.note ?? ''
   return {
     sessions: sessions.length,
     commits: totalCommits,
     hours: totalHours,
     tokens: totalTokens,
     confidence: '±40%',
+    note,
   }
 }
 
@@ -94,6 +104,5 @@ export async function analyse(
     toSha: commits.length > 0 ? commits[commits.length - 1].sha : null,
     sessions,
     totals,
-    healthDelta: null,
   }
 }

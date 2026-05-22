@@ -83,6 +83,14 @@ type GitReader = {
 type HealthReader = {
   getDelta: (repoPath: string, fromSha: string, toSha: string) => HealthDelta | null
 }
+
+// Pluggable estimator port (feature: estimator-port-adapter, 2026-05-22)
+// The estimate() function owns the full pipeline for one commit diff.
+// The note field in the returned EffortEstimate is the honesty contract:
+// every implementation must describe its methodology there.
+type Estimator = {
+  estimate: (diff: string) => EffortEstimate
+}
 ```
 
 ### Component Directory Layout
@@ -90,25 +98,27 @@ type HealthReader = {
 ```
 packages/cli/
 ├── src/
-│   ├── core/                    # pure functions — no I/O
-│   │   ├── ports.ts             # GitReader, HealthReader types
-│   │   ├── types.ts             # Commit, Session, FileStats, AnalysisResult
+│   ├── core/                          # pure functions — no I/O
+│   │   ├── ports.ts                   # GitReader, HealthReader, Estimator types
+│   │   ├── types.ts                   # Commit, Session, FileStats, AnalysisResult, Totals
 │   │   ├── parse-commits.ts
 │   │   ├── detect-sessions.ts
 │   │   ├── classify-file.ts
-│   │   ├── estimate-cost.ts
-│   │   ├── compute-hours.ts
+│   │   ├── estimate-cost.ts           # used internally by swoopy-estimator-adapter
+│   │   ├── compute-hours.ts           # used internally by swoopy-estimator-adapter
 │   │   ├── format.ts
-│   │   └── analyse.ts           # pipeline orchestrator (accepts ports)
-│   └── shell/                   # I/O and adapters
-│       ├── git-adapter.ts       # implements GitReader
-│       ├── health-adapter.ts    # implements HealthReader (null stub)
-│       ├── config-loader.ts     # .ccarc.json + CLI flag merge
-│       └── index.ts             # commander, injection, no domain logic
+│   │   └── analyse.ts                 # pipeline orchestrator (accepts ports)
+│   └── shell/                         # I/O and adapters
+│       ├── git-adapter.ts             # implements GitReader
+│       ├── health-adapter.ts          # implements HealthReader (null stub)
+│       ├── swoopy-estimator-adapter.ts # implements Estimator (default Swoopy model)
+│       ├── estimator-loader.ts        # dynamic import + validation for --estimator flag
+│       ├── config-loader.ts           # .ccarc.json + CLI flag merge
+│       └── index.ts                   # commander, injection, no domain logic
 ├── tests/
-│   ├── unit/core/               # pure function tests — no mocks
-│   └── acceptance/              # subprocess tests — real adapters
-├── .dependency-cruiser.cjs      # enforces core ↛ shell
+│   ├── unit/core/                     # pure function tests — no mocks
+│   └── acceptance/                    # subprocess tests — real adapters
+├── .dependency-cruiser.cjs            # enforces core ↛ shell
 └── vitest.config.ts
 ```
 
@@ -153,3 +163,4 @@ See ADRs:
 - [ADR-03](adr-03-execsync-over-simple-git.md) — execSync over simple-git
 - [ADR-04](adr-04-health-adapter-deferred.md) — fallow health adapter stubbed to null for Slice 1
 - [ADR-05](adr-05-single-package.md) — Single package over @cca/core + @cca/cli monorepo split
+- [ADR-06](adr-06-estimator-port.md) — Pluggable Estimator port at `(diff: string) => EffortEstimate`

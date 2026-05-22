@@ -1,0 +1,30 @@
+id: developer
+name: The Tool Developer
+tagline: "Extends or builds on top of cca for a specific context"
+triggers:
+  - Team throughput rates differ from Swoopy defaults
+  - Building a wrapper or integration that needs a custom cost model
+  - Publishing a calibrated estimator for others to reuse
+mental_model: >
+  Thinks in terms of dependency injection and interface contracts. Expects a
+  typed port to implement, a clear contract (inputs/outputs/constraints), and
+  a way to wire the implementation in without touching tool internals.
+  Familiar with hexagonal architecture — "ports and adapters" is the native vocabulary.
+vocabulary:
+  - "port", "adapter", "injection point"
+  - "throughput rates", "tokens/day"
+  - "ESM dynamic import", "default export"
+  - "EffortEstimate", "FileStats"
+frustrations:
+  - Hardcoded model constants buried in source — no extension point without a fork
+  - No documented port type to implement against
+  - Unclear contract: what must an alternative estimator return?
+needs:
+  - Exported TypeScript type to implement
+  - Clear honesty constraint on the `note` field (methodology must be documented)
+  - A way to inject without modifying tool source (CLI flag or programmatic)
+  - Working example in README
+notes: >
+  Emerged from feature estimator-port-adapter (2026-05-22).
+  The developer's success is the auditor's (J-01) success: a calibrated
+  estimate is only defensible if the developer has correctly implemented the port.

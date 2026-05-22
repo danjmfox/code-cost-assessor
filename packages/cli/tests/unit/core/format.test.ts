@@ -43,6 +43,7 @@ function makeResult(overrides: Partial<AnalysisResult> = {}): AnalysisResult {
       hours: 12.5,
       tokens: 35000,
       confidence: '±40%',
+      note: 'Swoopy token-weighted model. Throughput: source 250, test 400, doc 500, config 600 tokens/day. Char/token ratio: 1:3.5. Confidence: ±40%.',
     },
     healthDelta: null,
     ...overrides,

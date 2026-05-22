@@ -27,13 +27,6 @@ export type EffortEstimate = {
   note: string         // methodology citation
 }
 
-export type HealthDelta = {
-  verdict: 'improved' | 'degraded' | 'stable'
-  deadCodeIntroduced: number
-  complexityIntroduced: number
-  duplicationIntroduced: number
-} | null
-
 export type Session = {
   sessionIndex: number
   startTime: string        // ISO date-time string
@@ -41,7 +34,6 @@ export type Session = {
   durationHours: number
   commits: Commit[]
   effortEstimate: EffortEstimate
-  healthDelta: HealthDelta
 }
 
 export type Totals = {
@@ -50,6 +42,7 @@ export type Totals = {
   hours: number
   tokens: number
   confidence: string
+  note: string          // propagated from sessions[0].effortEstimate.note
 }
 
 export type AnalysisResult = {
@@ -59,13 +52,11 @@ export type AnalysisResult = {
   toSha: string | null
   sessions: Session[]
   totals: Totals
-  healthDelta: null         // aggregate; Slice 2
 }
 
 export type AnalyseOptions = {
   sessionGapHours?: number
   format?: 'summary' | 'json'
   output?: string          // --output <file>
-  noHealth?: boolean       // --no-health
   devRate?: number         // --dev-rate <USD/hr>
 }

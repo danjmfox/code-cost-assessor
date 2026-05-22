@@ -51,6 +51,9 @@ cca analyse ./my-repo --format json --output report.json
 
 # Adjust session gap (default: 3 hours)
 cca analyse ./my-repo --session-gap 2
+
+# Use a custom estimator module
+cca analyse ./my-repo --estimator ./my-estimator.ts
 ```
 
 ## Methodology
@@ -92,6 +95,81 @@ This model estimates **code volume**, not code value or complexity:
 
 **Best used for:** Order-of-magnitude benchmarking (e.g., "~5,000 hours of equivalent work generated"). Not suitable for precision costing or performance evaluation.
 
+## Custom estimators
+
+If the Swoopy defaults don't reflect your team's actual throughput — or you want to use a completely different model (LOC-based, flat-rate, ML-derived) — you can plug in your own estimator at runtime.
+
+### Quick start
+
+Create a module that exports a default object with an `estimate` method:
+
+```ts
+// my-estimator.ts
+export default {
+  estimate(diff: string) {
+    // Count added lines as a rough proxy for effort
+    const lines = diff.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++')).length
+    const hours = lines / 50   // 50 lines per hour — calibrate to your team
+
+    return {
+      hours,
+      tokens: lines * 10,
+      breakdown: {
+        source: { hours, tokens: lines * 10 },
+        test:   { hours: 0, tokens: 0 },
+        doc:    { hours: 0, tokens: 0 },
+        config: { hours: 0, tokens: 0 },
+      },
+      confidence: '±30%',
+      note: 'LOC-based model. 50 added lines per hour. Confidence: ±30%.',
+    }
+  },
+}
+```
+
+Pass it to `cca` with `--estimator`:
+
+```bash
+cca analyse ./my-repo --estimator ./my-estimator.ts
+```
+
+The `note` you return appears in both the summary output and `totals.note` in JSON, making your methodology transparent in every report.
+
+### The `Estimator` interface
+
+```ts
+type Estimator = {
+  estimate: (diff: string) => EffortEstimate
+}
+
+type EffortEstimate = {
+  hours: number
+  tokens: number
+  breakdown: {
+    source: { hours: number; tokens: number }
+    test:   { hours: number; tokens: number }
+    doc:    { hours: number; tokens: number }
+    config: { hours: number; tokens: number }
+  }
+  confidence: string   // shown in the Confidence column — e.g. '±30%'
+  note: string         // describes your methodology; appears in every report
+}
+```
+
+The `note` field is a honesty contract: every estimator must describe its methodology there. Recipients of your reports should be able to reproduce the number from the note alone.
+
+### Error handling
+
+| Situation | Behaviour |
+|-----------|-----------|
+| File not found | exits 1 with the missing path |
+| No default export / wrong shape | exits 1, names the expected shape |
+| `estimate()` throws at runtime | exits 1 with the error message; no silent fallback to Swoopy |
+
+### Runtime note
+
+The `--estimator` path is imported with `node --experimental-strip-types`, so `.ts` files work directly — no compilation step needed.
+
 ## Output
 
 ### Summary (default)
@@ -109,9 +187,7 @@ Session  Date        Commits  Est. Hours  Confidence
       ...
 TOTAL                   144        4725h ±40%
 
-Methodology: Swoopy token-weighted model
-  Throughput: source 250, test 400, doc 500, config 600 tokens/day
-  Char/token ratio: 1:3.5 | Confidence interval: ±40%
+Methodology: Swoopy token-weighted model. Throughput: source 250, test 400, doc 500, config 600 tokens/day. Char/token ratio: 1:3.5. Confidence: ±40%.
 ```
 
 ### JSON
@@ -151,7 +227,8 @@ The `--format json` output conforms to the `AnalysisResult` type:
     "commits": 144,
     "hours": 4725,
     "tokens": 573000,
-    "confidence": "±40%"
+    "confidence": "±40%",
+    "note": "Swoopy token-weighted model..."
   },
   "healthDelta": null
 }

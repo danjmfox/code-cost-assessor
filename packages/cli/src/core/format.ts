@@ -41,15 +41,8 @@ function formatTotalsRow(result: AnalysisResult): string {
   return `${'TOTAL'.padStart(7)}  ${''.padEnd(10)}  ${commits}  ${hours}h ±40%`
 }
 
-function formatMethodologySection(): string[] {
-  return [
-    '',
-    'Methodology: Swoopy token-weighted model',
-    '  Throughput: source 250, test 400, doc 500, config 600 tokens/day',
-    '  Char/token ratio: 1:3.5 | Confidence interval: ±40%',
-    '  Health analysis: unavailable (fallow not configured)',
-    '',
-  ]
+function formatMethodologySection(note: string): string[] {
+  return ['', `Methodology: ${note}`, '']
 }
 
 export function formatSummary(result: AnalysisResult): string {
@@ -59,7 +52,7 @@ export function formatSummary(result: AnalysisResult): string {
     ...result.sessions.map(formatSessionRow),
     ROW_SEPARATOR,
     formatTotalsRow(result),
-    ...formatMethodologySection(),
+    ...formatMethodologySection(result.totals.note),
   ]
   return lines.join('\n')
 }
