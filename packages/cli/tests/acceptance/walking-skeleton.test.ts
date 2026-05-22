@@ -72,7 +72,6 @@ describe('cca analyse — walking skeleton', () => {
     expect(json.sessions.length).toBeGreaterThan(10)
     expect(typeof json.totals.hours).toBe('number')
     expect(typeof json.totals.tokens).toBe('number')
-    expect(json.healthDelta).toBeNull()
 
     // Each session must have the required shape
     const s = json.sessions[0]

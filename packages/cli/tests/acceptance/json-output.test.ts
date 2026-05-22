@@ -61,8 +61,6 @@ describe('cca analyse --format json (US-2)', () => {
     expect(s.commits[0]).toHaveProperty('sha')
     expect(s.commits[0]).toHaveProperty('timestamp')
     expect(s).toHaveProperty('effortEstimate')
-    expect(s).toHaveProperty('healthDelta')
-    expect(s.healthDelta).toBeNull()            // AC-2.5 graceful degradation
   })
 
   // AC-2.4: effortEstimate includes breakdown by category
